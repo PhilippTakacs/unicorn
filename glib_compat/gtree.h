@@ -27,6 +27,15 @@
 
 typedef struct _GTree GTree;
 
+/**
+ * GTreeNode:
+ *
+ * An opaque type which identifies a specific node in a #GTree.
+ *
+ * Since: 2.68
+ */
+typedef struct _GTreeNode GTreeNode;
+
 typedef gboolean (*GTraverseFunc) (gpointer key, gpointer value, gpointer data);
 
 /* Balanced binary trees
@@ -38,6 +47,14 @@ GTree*   g_tree_new_full (GCompareDataFunc  key_compare_func,
         GDestroyNotify    key_destroy_func,
         GDestroyNotify    value_destroy_func);
 
+GTreeNode *g_tree_node_first (GTree *tree);
+
+GTreeNode *g_tree_node_last (GTree *tree);
+
+GTreeNode *g_tree_node_previous (GTreeNode *node);
+
+GTreeNode *g_tree_node_next (GTreeNode *node);
+
 GTree*   g_tree_ref (GTree *tree);
 
 void     g_tree_destroy (GTree *tree);
@@ -48,10 +65,24 @@ void g_tree_remove_all (GTree *tree);
 
 gboolean g_tree_remove (GTree *tree, gconstpointer key);
 
+GTreeNode *g_tree_lookup_node (GTree *tree,
+                               gconstpointer key);
+
 gpointer g_tree_lookup (GTree *tree, gconstpointer key);
 
 void     g_tree_foreach (GTree *tree, GTraverseFunc	func, gpointer user_data);
 
+GTreeNode *g_tree_search_node (GTree *tree,
+                               GCompareFunc search_func,
+                               gconstpointer user_data);
+
 gint     g_tree_nnodes (GTree *tree);
+
+GTreeNode *g_tree_lower_bound (GTree *tree,
+                               gconstpointer key);
+
+GTreeNode *g_tree_upper_bound (GTree *tree,
+                               gconstpointer key);
+
 
 #endif /* __G_TREE_H__ */

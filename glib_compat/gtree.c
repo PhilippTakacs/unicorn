@@ -66,8 +66,6 @@
 
 #define MAX_GTREE_HEIGHT 40
 
-typedef struct _GTreeNode  GTreeNode;
-
 /**
  * GTree:
  *
@@ -219,7 +217,18 @@ GTree *g_tree_new_full (GCompareDataFunc key_compare_func,
     return tree;
 }
 
-static inline GTreeNode *g_tree_first_node (GTree *tree)
+/**
+ * g_tree_node_first:
+ * @tree: a #GTree
+ *
+ * Returns the first in-order node of the tree, or %NULL
+ * for an empty tree.
+ *
+ * Returns: (nullable) (transfer none): the first node in the tree
+ *
+ * Since: 2.68
+ */
+GTreeNode *g_tree_node_first (GTree *tree)
 {
     GTreeNode *tmp;
 
@@ -234,7 +243,47 @@ static inline GTreeNode *g_tree_first_node (GTree *tree)
     return tmp;
 } 
 
-static inline GTreeNode *g_tree_node_previous (GTreeNode *node)
+/**
+ * g_tree_node_last:
+ * @tree: a #GTree
+ *
+ * Returns the last in-order node of the tree, or %NULL
+ * for an empty tree.
+ *
+ * Returns: (nullable) (transfer none): the last node in the tree
+ *
+ * Since: 2.68
+ */
+GTreeNode *
+g_tree_node_last (GTree *tree)
+{
+  GTreeNode *tmp;
+
+  g_return_val_if_fail (tree != NULL, NULL);
+
+  if (!tree->root)
+    return NULL;
+
+  tmp = tree->root;
+
+  while (tmp->right_child)
+    tmp = tmp->right;
+
+  return tmp;
+}
+
+/**
+ * g_tree_node_previous
+ * @node: a #GTree node
+ *
+ * Returns the previous in-order node of the tree, or %NULL
+ * if the passed node was already the first one.
+ *
+ * Returns: (nullable) (transfer none): the previous node in the tree
+ *
+ * Since: 2.68
+ */
+GTreeNode *g_tree_node_previous (GTreeNode *node)
 {
     GTreeNode *tmp;
 
@@ -247,7 +296,18 @@ static inline GTreeNode *g_tree_node_previous (GTreeNode *node)
     return tmp;
 }
 
-static inline GTreeNode *g_tree_node_next (GTreeNode *node)
+/**
+ * g_tree_node_next
+ * @node: a #GTree node
+ *
+ * Returns the next in-order node of the tree, or %NULL
+ * if the passed node was already the last one.
+ *
+ * Returns: (nullable) (transfer none): the next node in the tree
+ *
+ * Since: 2.68
+ */
+GTreeNode *g_tree_node_next (GTreeNode *node)
 {
     GTreeNode *tmp;
 
@@ -267,7 +327,7 @@ void g_tree_remove_all (GTree *tree)
 
     g_return_if_fail (tree != NULL);
 
-    node = g_tree_first_node (tree);
+    node = g_tree_node_first (tree);
 
     while (node)
     {
@@ -796,6 +856,29 @@ static gboolean g_tree_remove_internal (GTree *tree, gconstpointer key, gboolean
 }
 
 /**
+ * g_tree_lookup_node:
+ * @tree: a #GTree
+ * @key: the key to look up
+ *
+ * Gets the tree node corresponding to the given key. Since a #GTree is
+ * automatically balanced as key/value pairs are added, key lookup
+ * is O(log n) (where n is the number of key/value pairs in the tree).
+ *
+ * Returns: (nullable) (transfer none): the tree node corresponding to
+ *          the key, or %NULL if the key was not found
+ *
+ * Since: 2.68
+ */
+GTreeNode *
+g_tree_lookup_node (GTree         *tree,
+                    gconstpointer  key)
+{
+    g_return_val_if_fail (tree != NULL, NULL);
+
+    return g_tree_find_node (tree, key);
+}
+
+/**
  * g_tree_lookup:
  * @tree: a #GTree
  * @key: the key to look up
@@ -811,9 +894,7 @@ gpointer g_tree_lookup (GTree *tree, gconstpointer key)
 {
     GTreeNode *node;
 
-    g_return_val_if_fail (tree != NULL, NULL);
-
-    node = g_tree_find_node (tree, key);
+    node = g_tree_lookup_node (tree, key);
 
     return node ? node->value : NULL;
 }
@@ -880,7 +961,7 @@ void g_tree_foreach (GTree *tree, GTraverseFunc func, gpointer user_data)
     if (!tree->root)
         return;
 
-    node = g_tree_first_node (tree);
+    node = g_tree_node_first (tree);
 
     while (node)
     {
@@ -951,6 +1032,40 @@ void g_tree_traverse (GTree *tree,
 }
 
 /**
+ * g_tree_search_node:
+ * @tree: a #GTree
+ * @search_func: a function used to search the #GTree
+ * @user_data: the data passed as the second argument to @search_func
+ *
+ * Searches a #GTree using @search_func.
+ *
+ * The @search_func is called with a pointer to the key of a key/value
+ * pair in the tree, and the passed in @user_data. If @search_func returns
+ * 0 for a key/value pair, then the corresponding node is returned as
+ * the result of g_tree_search(). If @search_func returns -1, searching
+ * will proceed among the key/value pairs that have a smaller key; if
+ * @search_func returns 1, searching will proceed among the key/value
+ * pairs that have a larger key.
+ *
+ * Returns: (nullable) (transfer none): the node corresponding to the
+ *          found key, or %NULL if the key was not found
+ *
+ * Since: 2.68
+ */
+GTreeNode *
+g_tree_search_node (GTree         *tree,
+                    GCompareFunc   search_func,
+                    gconstpointer  user_data)
+{
+    g_return_val_if_fail (tree != NULL, NULL);
+
+    if (!tree->root)
+        return NULL;
+
+    return g_tree_node_search (tree->root, search_func, user_data);
+}
+
+/**
  * g_tree_search:
  * @tree: a #GTree
  * @search_func: a function used to search the #GTree
@@ -973,12 +1088,119 @@ gpointer g_tree_search (GTree *tree,
         GCompareFunc   search_func,
         gconstpointer  user_data)
 {
+    GTreeNode *node;
+
+    node = g_tree_search_node (tree, search_func, user_data);
+
+    return node ? node->value : NULL;
+}
+
+/**
+ * g_tree_lower_bound:
+ * @tree: a #GTree
+ * @key: the key to calculate the lower bound for
+ *
+ * Gets the lower bound node corresponding to the given key,
+ * or %NULL if the tree is empty or all the nodes in the tree
+ * have keys that are strictly lower than the searched key.
+ *
+ * The lower bound is the first node that has its key greater
+ * than or equal to the searched key.
+ *
+ * Returns: (nullable) (transfer none): the tree node corresponding to
+ *          the lower bound, or %NULL if the tree is empty or has only
+ *          keys strictly lower than the searched key.
+ *
+ * Since: 2.68
+ */
+GTreeNode *
+g_tree_lower_bound (GTree         *tree,
+                    gconstpointer  key)
+{
+    GTreeNode *node, *result;
+    gint cmp;
+
     g_return_val_if_fail (tree != NULL, NULL);
 
-    if (tree->root)
-        return g_tree_node_search (tree->root, search_func, user_data);
-    else
+    node = tree->root;
+    if (!node)
         return NULL;
+
+    result = NULL;
+    while (1)
+    {
+        cmp = tree->key_compare (key, node->key, tree->key_compare_data);
+        if (cmp <= 0)
+        {
+            result = node;
+
+            if (!node->left_child)
+                return result;
+
+            node = node->left;
+        }
+        else
+        {
+            if (!node->right_child)
+                return result;
+
+            node = node->right;
+        }
+    }
+}
+
+/**
+ * g_tree_upper_bound:
+ * @tree: a #GTree
+ * @key: the key to calculate the upper bound for
+ *
+ * Gets the upper bound node corresponding to the given key,
+ * or %NULL if the tree is empty or all the nodes in the tree
+ * have keys that are lower than or equal to the searched key.
+ *
+ * The upper bound is the first node that has its key strictly greater
+ * than the searched key.
+ *
+ * Returns: (nullable) (transfer none): the tree node corresponding to the
+ *          upper bound, or %NULL if the tree is empty or has only keys
+ *          lower than or equal to the searched key.
+ *
+ * Since: 2.68
+ */
+GTreeNode *
+g_tree_upper_bound (GTree         *tree,
+                    gconstpointer  key)
+{
+    GTreeNode *node, *result;
+    gint cmp;
+
+    g_return_val_if_fail (tree != NULL, NULL);
+
+    node = tree->root;
+    if (!node)
+        return NULL;
+
+    result = NULL;
+    while (1)
+    {
+        cmp = tree->key_compare (key, node->key, tree->key_compare_data);
+        if (cmp < 0)
+        {
+            result = node;
+
+            if (!node->left_child)
+                return result;
+
+            node = node->left;
+        }
+        else
+        {
+            if (!node->right_child)
+                return result;
+
+            node = node->right;
+        }
+    }
 }
 
 /**
