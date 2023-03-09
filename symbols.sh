@@ -146,6 +146,7 @@ address_space_remove_listeners \
 address_space_init \
 address_space_destroy \
 memory_region_init_ram \
+memory_region_init_alias \
 memory_mapping_list_add_merge_sorted \
 exec_inline_op \
 floatx80_default_nan \

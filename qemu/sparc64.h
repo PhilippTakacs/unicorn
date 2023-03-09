@@ -146,6 +146,7 @@
 #define address_space_init address_space_init_sparc64
 #define address_space_destroy address_space_destroy_sparc64
 #define memory_region_init_ram memory_region_init_ram_sparc64
+#define memory_region_init_alias memory_region_init_alias_sparc64
 #define memory_mapping_list_add_merge_sorted memory_mapping_list_add_merge_sorted_sparc64
 #define exec_inline_op exec_inline_op_sparc64
 #define floatx80_default_nan floatx80_default_nan_sparc64

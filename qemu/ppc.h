@@ -146,6 +146,7 @@
 #define address_space_init address_space_init_ppc
 #define address_space_destroy address_space_destroy_ppc
 #define memory_region_init_ram memory_region_init_ram_ppc
+#define memory_region_init_alias memory_region_init_alias_ppc
 #define memory_mapping_list_add_merge_sorted memory_mapping_list_add_merge_sorted_ppc
 #define exec_inline_op exec_inline_op_ppc
 #define floatx80_default_nan floatx80_default_nan_ppc

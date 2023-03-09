@@ -146,6 +146,7 @@
 #define address_space_init address_space_init_riscv32
 #define address_space_destroy address_space_destroy_riscv32
 #define memory_region_init_ram memory_region_init_ram_riscv32
+#define memory_region_init_alias memory_region_init_alias_riscv32
 #define memory_mapping_list_add_merge_sorted memory_mapping_list_add_merge_sorted_riscv32
 #define exec_inline_op exec_inline_op_riscv32
 #define floatx80_default_nan floatx80_default_nan_riscv32

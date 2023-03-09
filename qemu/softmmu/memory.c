@@ -602,6 +602,14 @@ static void render_memory_region(FlatView *view,
 
     clip = addrrange_intersection(tmp, clip);
 
+    if (mr->alias) {
+        int128_subfrom(&base, int128_make64(mr->alias->addr));
+        int128_subfrom(&base, int128_make64(mr->alias_offset));
+        render_memory_region(view, mr->alias, base, clip,
+                             readonly);
+        return;
+    }
+
     /* Render subregions in priority order. */
     QTAILQ_FOREACH(subregion, &mr->subregions, subregions_link) {
         render_memory_region(view, subregion, base, clip, readonly);
@@ -651,7 +659,15 @@ static void render_memory_region(FlatView *view,
 static MemoryRegion *memory_region_get_flatview_root(MemoryRegion *mr)
 {
     while (mr->enabled) {
-        if (!mr->terminates) {
+        if (mr->alias) {
+            if (!mr->alias_offset && int128_ge(mr->size, mr->alias->size)) {
+                /* The alias is included in its entirety.  Use it as
+                 * the "real" root, so that we can share more FlatViews.
+                 */
+                mr = mr->alias;
+                continue;
+            }
+        } else if (!mr->terminates) {
             unsigned int found = 0;
             MemoryRegion *child, *next = NULL;
             QTAILQ_FOREACH(child, &mr->subregions, subregions_link) {
@@ -992,6 +1008,12 @@ MemTxResult memory_region_dispatch_read(struct uc_struct *uc, MemoryRegion *mr,
     unsigned size = memop_size(op);
     MemTxResult r;
 
+    if (mr->alias) {
+        return memory_region_dispatch_read(uc, mr->alias,
+                                           mr->alias_offset + addr,
+                                           pval, op, attrs);
+    }
+
     if (!memory_region_access_valid(uc, mr, addr, size, false, attrs)) {
         *pval = unassigned_mem_read(mr, addr, size);
         return MEMTX_DECODE_ERROR;
@@ -1010,6 +1032,11 @@ MemTxResult memory_region_dispatch_write(struct uc_struct *uc, MemoryRegion *mr,
 {
     unsigned size = memop_size(op);
 
+    if (mr->alias) {
+        return memory_region_dispatch_write(uc, mr->alias,
+                                            mr->alias_offset + addr,
+                                            data, op, attrs);
+    }
     if (!memory_region_access_valid(uc, mr, addr, size, true, attrs)) {
         unassigned_mem_write(mr, addr, data, size);
         return MEMTX_DECODE_ERROR;
@@ -1060,6 +1087,17 @@ void memory_region_init_ram_ptr(struct uc_struct *uc,
     mr->ram_block = qemu_ram_alloc_from_ptr(uc, size, ptr, mr);
 }
 
+void memory_region_init_alias(struct uc_struct *uc,
+                              MemoryRegion *mr,
+                              MemoryRegion *orig,
+                              hwaddr offset,
+                              uint64_t size)
+{
+    memory_region_init(uc, mr, size);
+    mr->alias = orig;
+    mr->alias_offset = offset;
+}
+
 uint64_t memory_region_size(MemoryRegion *mr)
 {
     if (int128_eq(mr->size, int128_2_64())) {
@@ -1080,9 +1118,15 @@ void memory_region_set_readonly(MemoryRegion *mr, bool readonly)
 
 void *memory_region_get_ram_ptr(MemoryRegion *mr)
 {
+    uint64_t offset = 0;
     void *ptr;
 
-    ptr = qemu_map_ram_ptr(mr->uc, mr->ram_block, 0);
+    while (mr->alias) {
+        offset += mr->alias_offset;
+        mr = mr->alias;
+    }
+    assert(mr->ram_block);
+    ptr = qemu_map_ram_ptr(mr->uc, mr->ram_block, offset);
 
     return ptr;
 }
@@ -1127,8 +1171,13 @@ static void memory_region_add_subregion_common(MemoryRegion *mr,
                                                hwaddr offset,
                                                MemoryRegion *subregion)
 {
+    MemoryRegion *alias;
+
     assert(!subregion->container);
     subregion->container = mr;
+    for (alias = subregion->alias; alias; alias = alias->alias) {
+        alias->mapped_via_alias++;
+    }
     subregion->addr = offset;
     subregion->end = offset + int128_get64(subregion->size);
     memory_region_update_container_subregions(subregion);
@@ -1144,9 +1193,15 @@ void memory_region_add_subregion(MemoryRegion *mr,
 void memory_region_del_subregion(MemoryRegion *mr,
                                  MemoryRegion *subregion)
 {
+    MemoryRegion *alias;
+
     memory_region_transaction_begin();
     assert(subregion->container == mr);
     subregion->container = NULL;
+    for (alias = subregion->alias; alias; alias = alias->alias) {
+        alias->mapped_via_alias--;
+        assert(alias->mapped_via_alias >= 0);
+    }
     QTAILQ_REMOVE(&mr->subregions, subregion, subregions_link);
     mr->uc->memory_region_update_pending = true;
     memory_region_transaction_commit(mr);

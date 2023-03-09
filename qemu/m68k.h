@@ -146,6 +146,7 @@
 #define address_space_init address_space_init_m68k
 #define address_space_destroy address_space_destroy_m68k
 #define memory_region_init_ram memory_region_init_ram_m68k
+#define memory_region_init_alias memory_region_init_alias_m68k
 #define memory_mapping_list_add_merge_sorted memory_mapping_list_add_merge_sorted_m68k
 #define exec_inline_op exec_inline_op_m68k
 #define floatx80_default_nan floatx80_default_nan_m68k

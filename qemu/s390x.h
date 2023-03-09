@@ -146,6 +146,7 @@
 #define address_space_init address_space_init_s390x
 #define address_space_destroy address_space_destroy_s390x
 #define memory_region_init_ram memory_region_init_ram_s390x
+#define memory_region_init_alias memory_region_init_alias_s390x
 #define memory_mapping_list_add_merge_sorted memory_mapping_list_add_merge_sorted_s390x
 #define exec_inline_op exec_inline_op_s390x
 #define floatx80_default_nan floatx80_default_nan_s390x

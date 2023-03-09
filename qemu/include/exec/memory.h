@@ -310,12 +310,15 @@ struct MemoryRegion {
     const MemoryRegionOps *ops;
     void *opaque;
     MemoryRegion *container;
+    int mapped_via_alias; /* Mapped via an alias, container might be NULL */
     Int128 size;
     hwaddr addr;
     void (*destructor)(MemoryRegion *mr);
     uint64_t align;
     bool terminates;
     bool enabled;
+    MemoryRegion *alias;
+    hwaddr alias_offset;
     int32_t priority;
     QTAILQ_HEAD(, MemoryRegion) subregions;
     QTAILQ_ENTRY(MemoryRegion) subregions_link;
@@ -574,6 +577,22 @@ void memory_region_init_ram(struct uc_struct *uc,
                             uint32_t perms);
 
 /**
+ * memory_region_init_alias: Initialize a memory region that aliases all or a
+ *                           part of another memory region.
+ *
+ * @mr: the #MemoryRegion to be initialized.
+ * @orig: the region to be referenced; @mr will be equivalent to
+ *        @orig between @offset and @offset + @size - 1.
+ * @offset: start of the section in @orig to be referenced.
+ * @size: size of the region.
+ */
+void memory_region_init_alias(struct uc_struct *uc,
+                              MemoryRegion *mr,
+                              MemoryRegion *orig,
+                              hwaddr offset,
+                              uint64_t size);
+
+/**
  * memory_region_size: get a memory region's size.
  *
  * @mr: the memory region being queried.
@@ -602,6 +621,9 @@ static inline bool memory_region_is_ram(MemoryRegion *mr)
  */
 static inline IOMMUMemoryRegion *memory_region_get_iommu(MemoryRegion *mr)
 {
+    if (mr->alias) {
+        return memory_region_get_iommu(mr->alias);
+    }
     if (mr->is_iommu) {
         return (IOMMUMemoryRegion *) mr;
     }
