@@ -148,6 +148,7 @@
 #define memory_region_init_ram memory_region_init_ram_tricore
 #define memory_region_init_alias memory_region_init_alias_tricore
 #define memory_mapping_list_add_merge_sorted memory_mapping_list_add_merge_sorted_tricore
+#define find_memory_mapping find_memory_mapping_tricore
 #define exec_inline_op exec_inline_op_tricore
 #define floatx80_default_nan floatx80_default_nan_tricore
 #define float_raise float_raise_tricore

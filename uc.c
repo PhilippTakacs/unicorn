@@ -1486,32 +1486,7 @@ uc_err uc_mem_unmap(struct uc_struct *uc, uint64_t address, size_t size)
 // find the memory region of this address
 MemoryRegion *find_memory_region(struct uc_struct *uc, uint64_t address)
 {
-    unsigned int i;
-
-    if (uc->mapped_block_count == 0) {
-        return NULL;
-    }
-
-    // try with the cache index first
-    i = uc->mapped_block_cache_index;
-
-    if (i < uc->mapped_block_count &&
-        address >= uc->mapped_blocks[i]->addr &&
-        address <= uc->mapped_blocks[i]->end - 1) {
-        return uc->mapped_blocks[i];
-    }
-
-    i = bsearch_mapped_blocks(uc, address);
-
-    if (i < uc->mapped_block_count &&
-        address >= uc->mapped_blocks[i]->addr &&
-        address <= uc->mapped_blocks[i]->end - 1) {
-        uc->mapped_block_cache_index = i;
-        return uc->mapped_blocks[i];
-    }
-
-    // not found
-    return NULL;
+    return uc->memory_mapping(uc, address);
 }
 
 UNICORN_EXPORT

@@ -148,6 +148,7 @@
 #define memory_region_init_ram memory_region_init_ram_mips64el
 #define memory_region_init_alias memory_region_init_alias_mips64el
 #define memory_mapping_list_add_merge_sorted memory_mapping_list_add_merge_sorted_mips64el
+#define find_memory_mapping find_memory_mapping_mips64el
 #define exec_inline_op exec_inline_op_mips64el
 #define floatx80_default_nan floatx80_default_nan_mips64el
 #define float_raise float_raise_mips64el
