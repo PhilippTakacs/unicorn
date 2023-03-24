@@ -120,6 +120,7 @@
 #define memory_map memory_map_ppc64
 #define memory_map_io memory_map_io_ppc64
 #define memory_map_ptr memory_map_ptr_ppc64
+#define memory_region_alias memory_region_alias_ppc64
 #define memory_unmap memory_unmap_ppc64
 #define memory_free memory_free_ppc64
 #define flatview_unref flatview_unref_ppc64

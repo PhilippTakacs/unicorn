@@ -1480,6 +1480,9 @@ static void memory_map_init(struct uc_struct *uc)
     uc->system_io = g_malloc(sizeof(*(uc->system_io)));
     memory_region_init_io(uc, uc->system_io, &unassigned_io_ops, NULL, 65536);
     address_space_init(uc, &uc->address_space_io, uc->system_io);
+
+    uc->aliases = g_malloc(sizeof(*(uc->aliases)));
+    memory_region_init(uc, uc->aliases, UINT64_MAX);
 }
 
 /* physical memory access (slow version, mainly for debug) */

@@ -109,6 +109,8 @@ typedef MemoryRegion *(*uc_memory_mapping_t)(struct uc_struct *, hwaddr addr);
 
 typedef void (*uc_readonly_mem_t)(MemoryRegion *mr, bool readonly);
 
+typedef MemoryRegion *(*uc_mem_alias_t)(struct uc_struct *, MemoryRegion *mr, hwaddr addr, hwaddr offset, hwaddr size);
+
 typedef int (*uc_cpus_init)(struct uc_struct *, const char *);
 
 typedef MemoryRegion *(*uc_memory_map_io_t)(struct uc_struct *uc,
@@ -287,6 +289,7 @@ struct uc_struct {
     uc_memory_mapping_t memory_mapping;
     uc_mem_unmap_t memory_unmap;
     uc_readonly_mem_t readonly_mem;
+    uc_mem_alias_t add_alias;
     uc_cpus_init cpus_init;
     uc_target_page_init target_page;
     uc_softfloat_initialize softfloat_initialize;
@@ -311,6 +314,7 @@ struct uc_struct {
     MemoryRegion *system_memory;    // qemu/exec.c
     MemoryRegion *system_io;        // qemu/exec.c
     MemoryRegion io_mem_unassigned; // qemu/exec.c
+    MemoryRegion *aliases;
     RAMList ram_list;               // qemu/exec.c
     /* qemu/exec.c */
     unsigned int alloc_hint;

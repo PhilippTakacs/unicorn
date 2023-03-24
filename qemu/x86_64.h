@@ -120,6 +120,7 @@
 #define memory_map memory_map_x86_64
 #define memory_map_io memory_map_io_x86_64
 #define memory_map_ptr memory_map_ptr_x86_64
+#define memory_region_alias memory_region_alias_x86_64
 #define memory_unmap memory_unmap_x86_64
 #define memory_free memory_free_x86_64
 #define flatview_unref flatview_unref_x86_64

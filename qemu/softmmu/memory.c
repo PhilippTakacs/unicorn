@@ -27,6 +27,7 @@
 //#define DEBUG_UNASSIGNED
 
 typedef struct AddrRange AddrRange;
+static void memory_region_update_container_subregions(MemoryRegion *subregion);
 
 /*
  * Note that signed integers are needed for negative offsetting in aliases
@@ -148,9 +149,21 @@ MemoryRegion *memory_map_io(struct uc_struct *uc, ram_addr_t begin, size_t size,
     return mmio;
 }
 
-void memory_unmap(struct uc_struct *uc, MemoryRegion *mr)
+static void remove_mapped_block(struct uc_struct *uc, MemoryRegion *mr)
 {
     int i;
+    for (i = 0; i < uc->mapped_block_count; i++) {
+        if (uc->mapped_blocks[i] == mr) {
+            uc->mapped_block_count--;
+            //shift remainder of array down over deleted pointer
+            memmove(&uc->mapped_blocks[i], &uc->mapped_blocks[i + 1], sizeof(MemoryRegion*) * (uc->mapped_block_count - i));
+            break;
+        }
+    }
+}
+
+void memory_unmap(struct uc_struct *uc, MemoryRegion *mr)
+{
     hwaddr addr;
 
     // Make sure all pages associated with the MemoryRegion are flushed
@@ -162,29 +175,29 @@ void memory_unmap(struct uc_struct *uc, MemoryRegion *mr)
     }
     memory_region_del_subregion(uc->system_memory, mr);
 
-    for (i = 0; i < uc->mapped_block_count; i++) {
-        if (uc->mapped_blocks[i] == mr) {
-            uc->mapped_block_count--;
-            //shift remainder of array down over deleted pointer
-            memmove(&uc->mapped_blocks[i], &uc->mapped_blocks[i + 1], sizeof(MemoryRegion*) * (uc->mapped_block_count - i));
-            mr->destructor(mr);
-            g_free(mr);
-            break;
-        }
-    }
+    remove_mapped_block(uc, mr);
+    mr->destructor(mr);
+    g_free(mr);
 }
 
 int memory_free(struct uc_struct *uc)
 {
-    MemoryRegion *mr;
-    int i;
+    MemoryRegion *mr, *mr_next;
 
-    for (i = 0; i < uc->mapped_block_count; i++) {
-        mr = uc->mapped_blocks[i];
-        mr->enabled = false;
+    QTAILQ_FOREACH_SAFE(mr, &uc->system_memory->subregions, subregions_link, mr_next) {
         memory_region_del_subregion(uc->system_memory, mr);
         mr->destructor(mr);
-        /* destroy subregion */
+        g_free(mr);
+    }
+    QTAILQ_FOREACH_SAFE(mr, &uc->system_io->subregions, subregions_link, mr_next) {
+        memory_region_del_subregion(uc->system_io, mr);
+        mr->destructor(mr);
+        g_free(mr);
+    }
+    QTAILQ_FOREACH_SAFE(mr, &uc->aliases->subregions, subregions_link, mr_next) {
+        assert(mr->mapped_via_alias == 0);
+        memory_region_del_subregion(uc->aliases, mr);
+        mr->destructor(mr);
         g_free(mr);
     }
 
@@ -1096,6 +1109,30 @@ void memory_region_init_alias(struct uc_struct *uc,
     memory_region_init(uc, mr, size);
     mr->alias = orig;
     mr->alias_offset = offset;
+    mr->perms = orig->perms;
+}
+
+MemoryRegion *memory_region_alias(struct uc_struct *uc,
+                         MemoryRegion *mr,
+                         hwaddr addr,
+                         hwaddr offset,
+                         uint64_t size)
+{
+    MemoryRegion *alias = g_new(MemoryRegion, 1);
+
+    if (mr->container != uc->aliases) {
+        //TODO less hacky
+        printf("move to alias: 0x%lX\n", mr->addr);
+        remove_mapped_block(uc, mr);
+        memory_region_del_subregion(uc->system_memory, mr);
+        memory_region_add_subregion(uc->aliases, mr->addr, mr);
+    }
+
+    uc->memory_region_update_pending = true;
+    memory_region_init_alias(uc, alias, mr, offset, size);
+    memory_region_add_subregion(uc->system_memory, addr + offset, alias);
+    memory_region_transaction_commit(alias);
+    return alias;
 }
 
 uint64_t memory_region_size(MemoryRegion *mr)

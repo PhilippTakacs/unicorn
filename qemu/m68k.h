@@ -120,6 +120,7 @@
 #define memory_map memory_map_m68k
 #define memory_map_io memory_map_io_m68k
 #define memory_map_ptr memory_map_ptr_m68k
+#define memory_region_alias memory_region_alias_m68k
 #define memory_unmap memory_unmap_m68k
 #define memory_free memory_free_m68k
 #define flatview_unref flatview_unref_m68k

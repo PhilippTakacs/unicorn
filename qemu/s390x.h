@@ -120,6 +120,7 @@
 #define memory_map memory_map_s390x
 #define memory_map_io memory_map_io_s390x
 #define memory_map_ptr memory_map_ptr_s390x
+#define memory_region_alias memory_region_alias_s390x
 #define memory_unmap memory_unmap_s390x
 #define memory_free memory_free_s390x
 #define flatview_unref flatview_unref_s390x

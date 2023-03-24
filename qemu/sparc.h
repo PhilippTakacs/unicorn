@@ -120,6 +120,7 @@
 #define memory_map memory_map_sparc
 #define memory_map_io memory_map_io_sparc
 #define memory_map_ptr memory_map_ptr_sparc
+#define memory_region_alias memory_region_alias_sparc
 #define memory_unmap memory_unmap_sparc
 #define memory_free memory_free_sparc
 #define flatview_unref flatview_unref_sparc

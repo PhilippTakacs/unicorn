@@ -1210,5 +1210,10 @@ MemoryRegion *memory_map_ptr(struct uc_struct *uc, hwaddr begin, size_t size, ui
                              uc_cb_mmio_write_t write_cb, void *user_data_read, void *user_data_write);
 void memory_unmap(struct uc_struct *uc, MemoryRegion *mr);
 int memory_free(struct uc_struct *uc);
+MemoryRegion *memory_region_alias(struct uc_struct *uc,
+                         MemoryRegion *mr,
+                         hwaddr addr,
+                         hwaddr offset,
+                         uint64_t size);
 
 #endif

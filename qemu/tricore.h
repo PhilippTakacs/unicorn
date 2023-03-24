@@ -120,6 +120,7 @@
 #define memory_map memory_map_tricore
 #define memory_map_io memory_map_io_tricore
 #define memory_map_ptr memory_map_ptr_tricore
+#define memory_region_alias memory_region_alias_tricore
 #define memory_unmap memory_unmap_tricore
 #define memory_free memory_free_tricore
 #define flatview_unref flatview_unref_tricore

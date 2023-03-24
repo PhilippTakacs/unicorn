@@ -1083,23 +1083,6 @@ uc_err uc_mmio_map(uc_engine *uc, uint64_t address, size_t size,
                                          user_data_read, user_data_write));
 }
 
-// Create a backup copy of the indicated MemoryRegion.
-// Generally used in prepartion for splitting a MemoryRegion.
-static uint8_t *copy_region(struct uc_struct *uc, MemoryRegion *mr)
-{
-    uint8_t *block = (uint8_t *)g_malloc0((size_t)int128_get64(mr->size));
-    if (block != NULL) {
-        uc_err err =
-            uc_mem_read(uc, mr->addr, block, (size_t)int128_get64(mr->size));
-        if (err != UC_ERR_OK) {
-            free(block);
-            block = NULL;
-        }
-    }
-
-    return block;
-}
-
 /*
     This function is similar to split_region, but for MMIO memory.
 
@@ -1197,12 +1180,8 @@ static bool split_mmio_region(struct uc_struct *uc, MemoryRegion *mr,
 static bool split_region(struct uc_struct *uc, MemoryRegion *mr,
                          uint64_t address, size_t size, bool do_delete)
 {
-    uint8_t *backup;
-    uint32_t perms;
     uint64_t begin, end, chunk_end;
     size_t l_size, m_size, r_size;
-    RAMBlock *block = NULL;
-    bool prealloc = false;
 
     chunk_end = address + size;
 
@@ -1222,38 +1201,10 @@ static bool split_region(struct uc_struct *uc, MemoryRegion *mr,
         return false;
     }
 
-    // Find the correct and large enough (which contains our target mr)
-    // to create the content backup.
-    block = mr->ram_block;
-
-    if (block == NULL) {
-        return false;
-    }
-
-    // RAM_PREALLOC is not defined outside exec.c and I didn't feel like
-    // moving it
-    prealloc = !!(block->flags & 1);
-
-    if (block->flags & 1) {
-        backup = block->host;
-    } else {
-        backup = copy_region(uc, mr);
-        if (backup == NULL) {
-            return false;
-        }
-    }
-
     // save the essential information required for the split before mr gets
     // deleted
-    perms = mr->perms;
     begin = mr->addr;
     end = mr->end;
-
-    // unmap this region first, then do split it later
-    if (uc_mem_unmap(uc, mr->addr, (size_t)int128_get64(mr->size)) !=
-        UC_ERR_OK) {
-        goto error;
-    }
 
     /* overlapping cases
      *               |------mr------|
@@ -1280,63 +1231,23 @@ static bool split_region(struct uc_struct *uc, MemoryRegion *mr,
     // these smaller allocation just failed so no guarantee that we can recover
     // the original allocation at this point
     if (l_size > 0) {
-        if (!prealloc) {
-            if (uc_mem_map(uc, begin, l_size, perms) != UC_ERR_OK) {
-                goto error;
-            }
-            if (uc_mem_write(uc, begin, backup, l_size) != UC_ERR_OK) {
-                goto error;
-            }
-        } else {
-            if (uc_mem_map_ptr(uc, begin, l_size, perms, backup) != UC_ERR_OK) {
-                goto error;
-            }
-        }
+        if (!uc->add_alias(uc, mr, begin, 0, l_size))
+            goto error;
     }
 
     if (m_size > 0 && !do_delete) {
-        if (!prealloc) {
-            if (uc_mem_map(uc, address, m_size, perms) != UC_ERR_OK) {
-                goto error;
-            }
-            if (uc_mem_write(uc, address, backup + l_size, m_size) !=
-                UC_ERR_OK) {
-                goto error;
-            }
-        } else {
-            if (uc_mem_map_ptr(uc, address, m_size, perms, backup + l_size) !=
-                UC_ERR_OK) {
-                goto error;
-            }
-        }
+        if (!uc->add_alias(uc, mr, begin, l_size, m_size))
+            goto error;
     }
 
     if (r_size > 0) {
-        if (!prealloc) {
-            if (uc_mem_map(uc, chunk_end, r_size, perms) != UC_ERR_OK) {
-                goto error;
-            }
-            if (uc_mem_write(uc, chunk_end, backup + l_size + m_size, r_size) !=
-                UC_ERR_OK) {
-                goto error;
-            }
-        } else {
-            if (uc_mem_map_ptr(uc, chunk_end, r_size, perms,
-                               backup + l_size + m_size) != UC_ERR_OK) {
-                goto error;
-            }
-        }
+        if (!uc->add_alias(uc, mr, begin, l_size+m_size, r_size))
+            goto error;
     }
 
-    if (!prealloc) {
-        free(backup);
-    }
     return true;
 
 error:
-    if (!prealloc) {
-        free(backup);
-    }
     return false;
 }
 

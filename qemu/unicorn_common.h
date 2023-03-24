@@ -136,6 +136,7 @@ static inline void uc_common_init(struct uc_struct* uc)
     uc->tcg_flush_tlb = tcg_flush_softmmu_tlb;
     uc->memory_map_io = memory_map_io;
     uc->set_tlb = uc_set_tlb;
+    uc->add_alias = memory_region_alias;
     uc->memory_mapping = find_memory_mapping;
 
     if (!uc->release)

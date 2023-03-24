@@ -120,6 +120,7 @@
 #define memory_map memory_map_mips
 #define memory_map_io memory_map_io_mips
 #define memory_map_ptr memory_map_ptr_mips
+#define memory_region_alias memory_region_alias_mips
 #define memory_unmap memory_unmap_mips
 #define memory_free memory_free_mips
 #define flatview_unref flatview_unref_mips

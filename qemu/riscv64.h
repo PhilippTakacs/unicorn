@@ -120,6 +120,7 @@
 #define memory_map memory_map_riscv64
 #define memory_map_io memory_map_io_riscv64
 #define memory_map_ptr memory_map_ptr_riscv64
+#define memory_region_alias memory_region_alias_riscv64
 #define memory_unmap memory_unmap_riscv64
 #define memory_free memory_free_riscv64
 #define flatview_unref flatview_unref_riscv64
