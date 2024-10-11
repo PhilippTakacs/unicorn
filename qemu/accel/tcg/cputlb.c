@@ -1208,8 +1208,9 @@ static void notdirty_write(CPUState *cpu, vaddr mem_vaddr, unsigned size,
     // - have memory hooks installed
     // - or doing snapshot
     // , then never clean the tlb
-    if (!(cpu->uc->snapshot_level > 0 || mr->priority > 0) && 
+    if (!(mr->ram || !mr->readonly || cpu->uc->snapshot_level > mr->priority) &&
             !(HOOK_EXISTS(cpu->uc, UC_HOOK_MEM_READ) || HOOK_EXISTS(cpu->uc, UC_HOOK_MEM_WRITE))) {
+        fprintf(stderr, "set dirty: %lu\n", mr->addr);
         tlb_set_dirty(cpu, mem_vaddr);
     }
 }
