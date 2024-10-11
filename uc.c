@@ -2147,6 +2147,7 @@ uc_err uc_context_save(uc_engine *uc, uc_context *context)
             restore_jit_state(uc);
             return ret;
         }
+        uc->tcg_flush_tlb(uc);
     }
 
     context->snapshot_level = uc->snapshot_level;
@@ -2418,6 +2419,7 @@ uc_err uc_context_restore(uc_engine *uc, uc_context *context)
             return ret;
         }
         uc_snapshot(uc);
+        uc->tcg_flush_tlb(uc);
     }
 
     if (uc->context_content & UC_CTL_CONTEXT_CPU) {
