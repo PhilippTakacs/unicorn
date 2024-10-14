@@ -2158,6 +2158,7 @@ uc_err uc_context_save(uc_engine *uc, uc_context *context)
             restore_jit_state(uc);
             return ret;
         }
+        uc->tcg_flush_tlb(uc);
         context->ramblock_freed = uc->ram_list.freed;
         context->last_block = uc->ram_list.last_block;
     }
@@ -2436,6 +2437,7 @@ uc_err uc_context_restore(uc_engine *uc, uc_context *context)
         if (!uc->flatview_copy(uc, uc->address_space_memory.current_map, context->fv, true)) {
             return UC_ERR_NOMEM;
         }
+        uc->tcg_flush_tlb(uc);
     }
 
     if (uc->context_content & UC_CTL_CONTEXT_CPU) {
