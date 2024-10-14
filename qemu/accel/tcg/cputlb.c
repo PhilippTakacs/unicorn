@@ -1192,8 +1192,6 @@ static void notdirty_write(CPUState *cpu, vaddr mem_vaddr, unsigned size,
 {
     ram_addr_t ram_addr = mem_vaddr + iotlbentry->addr;
 
-    assert(mr);
-
     if ((mr->perms & UC_PROT_EXEC) != 0) {
         struct page_collection *pages
             = page_collection_lock(cpu->uc, ram_addr, ram_addr + size);
@@ -1206,7 +1204,7 @@ static void notdirty_write(CPUState *cpu, vaddr mem_vaddr, unsigned size,
     // - have memory hooks installed
     // - or doing snapshot
     // , then never clean the tlb
-    if (!(mr->priority < cpu->uc->snapshot_level) &&
+    if (!(!mr || mr->priority < cpu->uc->snapshot_level) &&
             !(HOOK_EXISTS(cpu->uc, UC_HOOK_MEM_READ) || HOOK_EXISTS(cpu->uc, UC_HOOK_MEM_WRITE))) {
         tlb_set_dirty(cpu, mem_vaddr);
     }
@@ -1230,7 +1228,7 @@ void *probe_access(CPUArchState *env, target_ulong addr, int size,
     target_ulong tlb_addr;
     size_t elt_ofs = 0;
     int wp_access = 0;
-    MemoryRegion *mr;
+    MemoryRegion *mr = NULL;
     target_ulong paddr;
 
 #ifdef _MSC_VER
