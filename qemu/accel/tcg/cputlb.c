@@ -1186,6 +1186,32 @@ tb_page_addr_t get_page_addr_code(CPUArchState *env, target_ulong addr)
     return get_page_addr_code_hostp(env, addr, NULL);
 }
 
+static bool uc_mem_hook_installed(struct uc_struct *uc, target_ulong paddr)
+{
+    HOOK_FOREACH_VAR_DECLARE;
+    struct hook *hook;
+
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_FETCH_UNMAPPED, paddr))
+	return true;
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_READ_UNMAPPED, paddr))
+        return true;
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_READ, paddr))
+        return true;
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_READ_PROT, paddr))
+        return true;
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_FETCH_PROT, paddr))
+        return true;
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_READ_AFTER, paddr))
+        return true;
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_WRITE, paddr))
+        return true;
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_WRITE_UNMAPPED, paddr))
+        return true;
+    if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_WRITE_PROT, paddr))
+        return true;
+    return false;
+}
+
 static void notdirty_write(CPUState *cpu, vaddr mem_vaddr, unsigned size,
                            CPUIOTLBEntry *iotlbentry, uintptr_t retaddr,
                            CPUTLBEntry *tlbe)
@@ -1209,8 +1235,8 @@ static void notdirty_write(CPUState *cpu, vaddr mem_vaddr, unsigned size,
     // - or doing snapshot
     // , then never clean the tlb
     if (!(!mr || mr->priority < cpu->uc->snapshot_level) &&
-            !(HOOK_EXISTS(cpu->uc, UC_HOOK_MEM_READ) || HOOK_EXISTS(cpu->uc, UC_HOOK_MEM_WRITE)) &&
-            !(tlbe->addr_code != -1)) {
+            !(tlbe->addr_code != -1) &&
+            !uc_mem_hook_installed(cpu->uc, tlbe->paddr | (mem_vaddr & ~TARGET_PAGE_MASK))) {
         tlb_set_dirty(cpu, mem_vaddr);
     }
 }
