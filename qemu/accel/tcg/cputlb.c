@@ -1188,11 +1188,8 @@ tb_page_addr_t get_page_addr_code(CPUArchState *env, target_ulong addr)
 
 static bool uc_mem_hook_installed(struct uc_struct *uc, target_ulong paddr)
 {
-    HOOK_FOREACH_VAR_DECLARE;
-    struct hook *hook;
-
     if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_FETCH_UNMAPPED, paddr))
-	return true;
+        return true;
     if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_READ_UNMAPPED, paddr))
         return true;
     if (HOOK_EXISTS_BOUNDED(uc, UC_HOOK_MEM_READ, paddr))
