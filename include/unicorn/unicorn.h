@@ -605,6 +605,9 @@ typedef enum uc_control_type {
     // controle if context_save/restore should work with snapshots
     // Write: @args = (int)
     UC_CTL_CONTEXT_MODE,
+    // read the invalid_addr after an error
+    // Read: @args = (uint64_t*)
+    UC_CTL_INVALID_ADDR,
 } uc_control_type;
 
 /*
@@ -688,6 +691,8 @@ See sample_ctl.c for a detailed example.
     uc_ctl(uc, UC_CTL_WRITE(UC_CTL_TCG_BUFFER_SIZE, 1), (size))
 #define uc_ctl_context_mode(uc, mode)                                          \
     uc_ctl(uc, UC_CTL_WRITE(UC_CTL_CONTEXT_MODE, 1), (mode))
+#define uc_ctl_get_invalid_addr(uc, addr)                                    \
+    uc_ctl(uc, UC_CTL_READ(UC_CTL_INVALID_ADDR, 1), (addr))
 
 // Opaque storage for CPU context, used with uc_context_*()
 struct uc_context;
